@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Koordinatentransformation eines Quaders</title>
+<style>
+:root{--bg:#faf9f5;--surface:#ffffff;--surface2:#f1efe8;--text:#1f1e1c;--text2:#5f5e5a;--border:#d3d1c7;--accent:#185fa5;color-scheme:light;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1b19;--surface:#262522;--surface2:#2f2e2a;--text:#f1efe8;--text2:#b4b2a9;--border:#444441;--accent:#85b7eb;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1c1b19;--surface:#262522;--surface2:#2f2e2a;--text:#f1efe8;--text2:#b4b2a9;--border:#444441;--accent:#85b7eb;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:20px 16px 32px}
+h1{font-size:22px;font-weight:600;margin:0 0 4px}
+p.lead{margin:0 0 16px;color:var(--text2);font-size:15px}
+.app{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:760px){.app{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px}
+.card svg{width:100%;display:block;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.hint{font-size:12px;color:var(--text2);text-align:center;margin-top:2px}
+.pnl{display:flex;flex-direction:column;gap:12px}
+.pnl h2{font-size:14px;font-weight:600;margin:0 0 6px}
+.sel{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+select,input[type=number],button{font:inherit;font-size:14px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 8px;min-height:34px;max-width:100%}
+button{cursor:pointer}
+button:active{transform:scale(.98)}
+.row{display:grid;grid-template-columns:96px minmax(0,1fr) 62px;gap:8px;align-items:center;margin:2px 0}
+.row label{font-size:13px;color:var(--text2)}
+.row input[type=range]{width:100%;min-width:0;height:30px}
+.row input[type=number]{width:62px;padding:4px 6px}
+.pre{display:flex;flex-wrap:wrap;gap:6px}
+.mx{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 4px;font:13px ui-monospace,Menlo,monospace;text-align:right}
+.mx span.t{color:var(--accent);font-weight:600}
+.mx span.m{color:var(--text2)}
+.fm{font:13px ui-monospace,Menlo,monospace;color:var(--text2);margin:0 0 8px;overflow-wrap:anywhere}
+.pt{font:13px ui-monospace,Menlo,monospace;margin-top:8px;overflow-wrap:anywhere}
+.warn{background:var(--surface2);border-left:3px solid #BA7517;border-radius:0 8px 8px 0;padding:8px 10px;font-size:13px}
+.lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text2);margin-top:6px}
+.lg i{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle;border-radius:2px}
+</style>
+</head>
+<body>
+<main>
+<h1>Koordinatentransformation eines Quaders</h1>
+<p class="lead">Stelle Roll-, Pitch- und Yaw-Winkel sowie die Verschiebung ein. Gestrichelt ist die Ausgangslage, farbig die Endlage mit dem mitgedrehten Koordinatensystem x′, y′, z′. Ziehe in der Grafik, um die Ansicht zu drehen.</p>
+<div class="app">
+<div class="card">
+<svg id="v" viewBox="0 0 640 440" role="img" aria-label="Quader in Ausgangs- und Endlage"></svg>
+<div class="hint">Ansicht drehen: Finger oder Maus ziehen</div>
+<div class="lg">
+<span><i style="background:#D85A30"></i>x</span><span><i style="background:#639922"></i>y</span><span><i style="background:#378ADD"></i>z</span>
+<span>Gestrichelt: Ausgangslage</span><span>Punkt: Eckpunkt P</span>
+</div>
+</div>
+<div class="pnl">
+<div class="card">
+<h2>Drehung</h2>
+<div id="ang"></div>
+<div class="fm" id="fm"></div>
+<div class="hint" style="text-align:left;margin-bottom:8px">Gleichbedeutend: erst Yaw um z, dann Pitch um die neue y-Achse, dann Roll um die neue x-Achse. Oder: Roll, Pitch und Yaw nacheinander um die festen Achsen x, y, z.</div>
+<div class="warn" id="gl" hidden>Gimbal Lock bei Pitch = ±90°: Roll und Yaw wirken jetzt um dieselbe Achse. Nur noch ihre Summe oder Differenz ist bestimmend.</div>
+</div>
+<div class="card">
+<h2>Verschiebung</h2>
+<div id="tr"></div>
+</div>
+<div class="card">
+<h2>Homogene Matrix</h2>
+<div class="mx" id="mx"></div>
+<div class="pt" id="pt"></div>
+</div>
+<div class="pre">
+<button data-p="reset">Zurücksetzen</button>
+</div>
+</div>
+</div>
+</main>
+<script>
+const D=Math.PI/180,AXN='xyz';
+const SEQ={ZYX:[2,1,0],XYZ:[0,1,2],ZXZ:[2,0,2]};
+const st={ang:[0,0,0],t:[0,0,0],seq:'ZYX',mode:'intr',vy:-35,vp:22};
+const Rot=(k,t)=>{const c=Math.cos(t),s=Math.sin(t);return k==0?[[1,0,0],[0,c,-s],[0,s,c]]:k==1?[[c,0,s],[0,1,0],[-s,0,c]]:[[c,-s,0],[s,c,0],[0,0,1]];};
+const mul=(A,B)=>A.map(r=>[0,1,2].map(j=>r[0]*B[0][j]+r[1]*B[1][j]+r[2]*B[2][j]));
+const app=(M,p)=>[0,1,2].map(i=>M[i][0]*p[0]+M[i][1]*p[1]+M[i][2]*p[2]);
+const a=1,b=.6,c=.3;
+const V=[[-a,-b,-c],[a,-b,-c],[a,b,-c],[-a,b,-c],[-a,-b,c],[a,-b,c],[a,b,c],[-a,b,c]];
+const E=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+const F=[{i:[4,5,6,7],n:[0,0,1],f:'#5DCAA5'},{i:[0,1,5,4],n:[0,-1,0],f:'#F0997B'},{i:[1,2,6,5],n:[1,0,0],f:'#AFA9EC'},{i:[0,3,2,1],n:[0,0,-1],f:'#B4B2A9'},{i:[2,3,7,6],n:[0,1,0],f:'#EF9F27'},{i:[3,0,4,7],n:[-1,0,0],f:'#85B7EB'}];
+const COL=['#D85A30','#639922','#378ADD'];
+const S=48,CX=320,CY=250;
+let VW;
+const sc=p=>{const q=app(VW,p);return [CX+S*q[0],CY-S*q[2]];};
+const pt=p=>sc(p).map(v=>v.toFixed(1)).join(',');
+function getR(){
+const[r,p,y]=st.ang.map(x=>x*D);
+return mul(mul(Rot(2,y),Rot(1,p)),Rot(0,r));
+}
+const rows=[];
+function mk(host,lab,min,max,step,arr,i){
+const d=document.createElement('div');d.className='row';
+d.innerHTML='<label></label><input type="range" min="'+min+'" max="'+max+'" step="'+step+'"><input type="number" step="'+step+'" inputmode="decimal">';
+host.appendChild(d);
+const l=d.children[0],r=d.children[1],n=d.children[2];
+const o={l,r,n,arr,i,lab};rows.push(o);
+r.addEventListener('input',()=>{o.arr[i]=+r.value;n.value=r.value;render();});
+n.addEventListener('input',()=>{const v=parseFloat(n.value);if(isNaN(v))return;o.arr[i]=v;r.value=v;render();});
+}
+function labels(){
+rows.forEach(o=>{if(o.lab=='ang')o.l.textContent=['Roll φ · x','Pitch θ · y','Yaw ψ · z'][o.i];else o.l.textContent='t'+AXN[o.i];});
+}
+function sync(){rows.forEach(o=>{o.r.value=o.arr[o.i];o.n.value=o.arr[o.i];});
+labels();}
+for(let i=0;i<3;i++)mk(document.getElementById('ang'),'ang',-180,180,5,st.ang,i);
+for(let i=0;i<3;i++)mk(document.getElementById('tr'),'tr',-3,3,0.1,st.t,i);
+const PRE={reset:()=>{st.ang=[0,0,0];st.t=[0,0,0];}};
+document.querySelectorAll('button[data-p]').forEach(bn=>bn.addEventListener('click',()=>{
+PRE[bn.dataset.p]();rows.forEach(o=>{o.arr=o.lab=='ang'?st.ang:st.t;});sync();render();}));
+const f2=x=>(Math.abs(x)<0.005?0:x).toFixed(2);
+function render(){
+VW=mul(Rot(0,st.vp*D),Rot(2,st.vy*D));
+const R=getR(),t=st.t;
+const W=V.map(v=>{const q=app(R,v);return [q[0]+t[0],q[1]+t[1],q[2]+t[2]];});
+let s='';
+[[2.6,0,0,'X'],[0,2.6,0,'Y'],[0,0,2.2,'Z']].forEach((e,k)=>{
+const o=sc([0,0,0]),p=sc(e);
+s+='<line x1="'+o[0]+'" y1="'+o[1]+'" x2="'+p[0]+'" y2="'+p[1]+'" stroke="'+COL[k]+'" stroke-width="1.2" stroke-opacity=".55"/><text x="'+(p[0]+5)+'" y="'+(p[1]+4)+'" font-size="12" style="fill:var(--text2)">'+e[3]+'</text>';});
+E.forEach(e=>{const p=sc(V[e[0]]),q=sc(V[e[1]]);
+s+='<line x1="'+p[0]+'" y1="'+p[1]+'" x2="'+q[0]+'" y2="'+q[1]+'" stroke-width="1.2" stroke-dasharray="4 4" style="stroke:var(--text2)"/>';});
+const o0=sc([0,0,0]),o1=sc(t);
+s+='<line x1="'+o0[0]+'" y1="'+o0[1]+'" x2="'+o1[0]+'" y2="'+o1[1]+'" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round" style="stroke:var(--accent)"/>';
+F.forEach(f=>{const n=app(VW,app(R,f.n));if(n[1]>=-0.001)return;
+s+='<polygon points="'+f.i.map(k=>pt(W[k])).join(' ')+'" fill="'+f.f+'" fill-opacity=".85" stroke="#5f5e5a" stroke-width="1" stroke-linejoin="round"/>';});
+const P=sc(V[6]),Q=sc(W[6]);
+s+='<line x1="'+P[0]+'" y1="'+P[1]+'" x2="'+Q[0]+'" y2="'+Q[1]+'" stroke-width="1.2" stroke-dasharray="1 3" style="stroke:var(--accent)"/><circle cx="'+P[0]+'" cy="'+P[1]+'" r="4" fill="none" stroke-width="1.5" style="stroke:var(--text)"/><circle cx="'+Q[0]+'" cy="'+Q[1]+'" r="4.5" style="fill:var(--text)"/>';
+const oo=sc(t);
+[[1.6,0,0,"x′"],[0,1.4,0,"y′"],[0,0,1.3,"z′"]].forEach((e,k)=>{
+const q=app(R,e),p=sc([q[0]+t[0],q[1]+t[1],q[2]+t[2]]);
+s+='<line x1="'+oo[0]+'" y1="'+oo[1]+'" x2="'+p[0]+'" y2="'+p[1]+'" stroke="'+COL[k]+'" stroke-width="3" stroke-linecap="round"/><circle cx="'+p[0]+'" cy="'+p[1]+'" r="3.5" fill="'+COL[k]+'"/><text x="'+(p[0]+(p[0]>=oo[0]?7:-18))+'" y="'+(p[1]+4)+'" font-size="13" font-weight="600" fill="'+COL[k]+'">'+e[3]+'</text>';});
+document.getElementById('v').innerHTML=s;
+let m='';
+for(let i=0;i<3;i++){for(let j=0;j<3;j++)m+='<span>'+f2(R[i][j])+'</span>';m+='<span class="t">'+f2(t[i])+'</span>';}
+m+='<span class="m">0.00</span><span class="m">0.00</span><span class="m">0.00</span><span class="m">1.00</span>';
+document.getElementById('mx').innerHTML=m;
+const P1=W[6];
+document.getElementById('pt').textContent='P = ('+f2(V[6][0])+', '+f2(V[6][1])+', '+f2(V[6][2])+')  →  P′ = ('+f2(P1[0])+', '+f2(P1[1])+', '+f2(P1[2])+')';
+document.getElementById('fm').textContent='R = Rz(ψ) · Ry(θ) · Rx(φ)   p′ = R·p + t';
+const bb=st.ang[1]*D;
+document.getElementById('gl').hidden=!(Math.abs(Math.cos(bb))<0.02);
+}
+const sv=document.getElementById('v');let drag=null;
+sv.addEventListener('pointerdown',e=>{drag=[e.clientX,e.clientY];sv.setPointerCapture(e.pointerId);sv.style.cursor='grabbing';});
+sv.addEventListener('pointermove',e=>{if(!drag)return;st.vy+=(e.clientX-drag[0])*.5;st.vp=Math.max(-10,Math.min(85,st.vp+(e.clientY-drag[1])*.4));drag=[e.clientX,e.clientY];render();});
+const end=()=>{drag=null;sv.style.cursor='grab';};
+sv.addEventListener('pointerup',end);sv.addEventListener('pointercancel',end);
+sync();render();
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rotationen in 3D sind nicht kommutativ</title>
+<style>
+:root{--bg:#faf9f5;--surface:#ffffff;--surface2:#f1efe8;--text:#1f1e1c;--text2:#5f5e5a;--border:#d3d1c7;--accent:#185fa5;color-scheme:light;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1b19;--surface:#262522;--surface2:#2f2e2a;--text:#f1efe8;--text2:#b4b2a9;--border:#444441;--accent:#85b7eb;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1c1b19;--surface:#262522;--surface2:#2f2e2a;--text:#f1efe8;--text2:#b4b2a9;--border:#444441;--accent:#85b7eb;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:20px 16px 32px}
+h1{font-size:22px;font-weight:600;margin:0 0 4px}
+p.lead{margin:0 0 18px;color:var(--text2);font-size:15px}
+.ctl{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.ctl label{font-size:15px;color:var(--text2)}
+.ctl input{flex:1;min-width:0;height:32px}
+.ctl output{min-width:44px;text-align:right;font-weight:600}
+.rt{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:18px 0 6px;flex-wrap:wrap}
+.rt b{font-size:15px}
+.rt code{font:13px ui-monospace,Menlo,monospace;color:var(--text2);white-space:nowrap}
+.g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.c{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px 6px 8px}
+.c.end{border:2px solid var(--accent)}
+.c svg{width:100%;display:block}
+.c div{font-size:12px;color:var(--text2);text-align:center}
+.lg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--text2);margin:14px 0}
+.lg i{display:inline-block;width:14px;height:4px;margin-right:5px;vertical-align:middle;border-radius:2px}
+.res{background:var(--surface2);border-radius:8px;padding:12px 14px;font-size:15px}
+.res span{color:var(--text2)}
+@media (max-width:480px){.c div{font-size:11px}}
+</style>
+</head>
+<body>
+<main>
+<h1>Rotationen in 3D sind nicht kommutativ</h1>
+<p class="lead">Das Koordinatensystem ist fest mit dem Quader verbunden und dreht sich mit. Beide Zeilen drehen zweimal um θ, nur in vertauschter Reihenfolge.</p>
+<div class="ctl"><label for="th">Drehwinkel θ</label><input type="range" id="th" min="0" max="180" step="5" value="90"><output id="thv">90°</output></div>
+<div id="rows"></div>
+<div class="lg">
+<span><i style="background:#D85A30"></i>x-Achse</span>
+<span><i style="background:#639922"></i>y-Achse</span>
+<span><i style="background:#378ADD"></i>z-Achse</span>
+<span>Dicke Achse: Drehachse des Schritts</span>
+<span>Flächen: oben türkis, vorne rot, rechts violett</span>
+</div>
+<div class="res" id="res"></div>
+</main>
+<script>
+const a=.9,b=.55,c=.3;
+const V=[[-a,-b,-c],[a,-b,-c],[a,b,-c],[-a,b,-c],[-a,-b,c],[a,-b,c],[a,b,c],[-a,b,c]];
+const F=[{i:[4,5,6,7],n:[0,0,1],f:'#5DCAA5'},{i:[0,1,5,4],n:[0,-1,0],f:'#F0997B'},{i:[1,2,6,5],n:[1,0,0],f:'#AFA9EC'},{i:[0,3,2,1],n:[0,0,-1],f:'#B4B2A9'},{i:[2,3,7,6],n:[0,1,0],f:'#EF9F27'},{i:[3,0,4,7],n:[-1,0,0],f:'#85B7EB'}];
+const AX=[{e:[1.45,0,0],c:'#D85A30',l:'x'},{e:[0,1.2,0],c:'#639922',l:'y'},{e:[0,0,1.1],c:'#378ADD',l:'z'}];
+const rad=d=>d*Math.PI/180;
+const Rx=t=>[[1,0,0],[0,Math.cos(t),-Math.sin(t)],[0,Math.sin(t),Math.cos(t)]];
+const Rz=t=>[[Math.cos(t),-Math.sin(t),0],[Math.sin(t),Math.cos(t),0],[0,0,1]];
+const I3=[[1,0,0],[0,1,0],[0,0,1]];
+const mul=(A,B)=>A.map((r,i)=>[0,1,2].map(j=>r[0]*B[0][j]+r[1]*B[1][j]+r[2]*B[2][j]));
+const app=(M,p)=>[0,1,2].map(i=>M[i][0]*p[0]+M[i][1]*p[1]+M[i][2]*p[2]);
+const VW=mul(Rx(rad(22)),Rz(rad(-35)));
+const S=58,CX=110,CY=88;
+const sc=p=>{const q=app(VW,p);return [CX+S*q[0],CY-S*q[2]];};
+function cell(M,hl){
+let s='<svg viewBox="0 0 220 170" role="img" aria-label="Quader mit mitgedrehtem Koordinatensystem">';
+F.forEach(f=>{
+const n=app(VW,app(M,f.n));
+if(n[1]>=-0.001)return;
+const pts=f.i.map(k=>sc(app(M,V[k])).map(v=>v.toFixed(1)).join(',')).join(' ');
+s+='<polygon points="'+pts+'" fill="'+f.f+'" fill-opacity="0.85" stroke="#5f5e5a" stroke-width="0.8" stroke-linejoin="round"/>';
+});
+AX.forEach((x,k)=>{
+const o=sc([0,0,0]),t=sc(app(M,x.e));
+const w=(hl===k)?3.5:1.8;
+s+='<line x1="'+o[0]+'" y1="'+o[1]+'" x2="'+t[0]+'" y2="'+t[1]+'" stroke="'+x.c+'" stroke-width="'+w+'" stroke-linecap="round"/><circle cx="'+t[0]+'" cy="'+t[1]+'" r="3" fill="'+x.c+'"/><text x="'+(t[0]+((t[0]>=o[0])?6:-12))+'" y="'+(t[1]+4)+'" font-size="12" font-weight="600" fill="'+x.c+'">'+x.l+'</text>';
+});
+return s+'</svg>';
+}
+function render(){
+const v=document.getElementById('th').value,t=rad(+v);
+document.getElementById('thv').textContent=v+'°';
+const rows=[
+{title:'Erst um x, dann um die mitgedrehte z-Achse',f:'R = Rx · Rz',s1:Rx(t),s2:mul(Rx(t),Rz(t)),h1:0,h2:2,l1:'Schritt 1: um x',l2:'Schritt 2: um neue z'},
+{title:'Erst um z, dann um die mitgedrehte x-Achse',f:'R = Rz · Rx',s1:Rz(t),s2:mul(Rz(t),Rx(t)),h1:2,h2:0,l1:'Schritt 1: um z',l2:'Schritt 2: um neue x'}
+];
+let h='';
+rows.forEach(r=>{
+h+='<div class="rt"><b>'+r.title+'</b><code>'+r.f+'</code></div><div class="g">';
+[[I3,'Start',-1],[r.s1,r.l1,r.h1],[r.s2,r.l2,r.h2]].forEach((x,k)=>{
+h+='<div class="c'+(k==2?' end':'')+'">'+cell(x[0],x[2])+'<div>'+x[1]+'</div></div>';
+});
+h+='</div>';
+});
+document.getElementById('rows').innerHTML=h;
+const A=mul(Rx(t),Rz(t)),B=mul(Rz(t),Rx(t));
+let d=0;for(let i=0;i<3;i++)for(let j=0;j<3;j++)d=Math.max(d,Math.abs(A[i][j]-B[i][j]));
+document.getElementById('res').innerHTML=d<0.005
+?'<b>Bei diesem Winkel stimmen beide Endlagen überein.</b> <span>Größte Abweichung der Matrixeinträge: '+d.toFixed(2)+'. Das ist ein Sonderfall, kein Gegenbeweis.</span>'
+:'<b>Die Endlagen unterscheiden sich.</b> <span>Größte Abweichung der Matrixeinträge von Rx·Rz und Rz·Rx: '+d.toFixed(2)+'.</span>';
+}
+document.getElementById('th').addEventListener('input',render);
+render();
+</script>
+</body>
+</html>

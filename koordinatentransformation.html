@@ -33,7 +33,7 @@ button:active{transform:scale(.98)}
 .mx{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 4px;font:13px ui-monospace,Menlo,monospace;text-align:right}
 .mx span.t{color:var(--accent);font-weight:600}
 .mx span.m{color:var(--text2)}
-.fm{font:13px ui-monospace,Menlo,monospace;color:var(--text2);margin:0 0 8px;overflow-wrap:anywhere}
+.fm{font-size:13px;color:var(--text2);margin:0 0 8px;overflow-wrap:anywhere}
 .pt{font:13px ui-monospace,Menlo,monospace;margin-top:8px;overflow-wrap:anywhere}
 .warn{background:var(--surface2);border-left:3px solid #BA7517;border-radius:0 8px 8px 0;padding:8px 10px;font-size:13px}
 .lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text2);margin-top:6px}
@@ -50,7 +50,7 @@ button:active{transform:scale(.98)}
 <div class="hint">Ansicht drehen: Finger oder Maus ziehen</div>
 <div class="lg">
 <span><i style="background:#D85A30"></i>x</span><span><i style="background:#639922"></i>y</span><span><i style="background:#378ADD"></i>z</span>
-<span>Gestrichelt: Ausgangslage</span><span>Punkt: Eckpunkt P</span>
+<span>Gestrichelt: Ausgangslage</span><span>Eckpunkt: hohl p′ (Körpersystem), gefüllt p (Weltsystem)</span>
 </div>
 </div>
 <div class="pnl">
@@ -107,7 +107,7 @@ r.addEventListener('input',()=>{o.arr[i]=+r.value;n.value=r.value;render();});
 n.addEventListener('input',()=>{const v=parseFloat(n.value);if(isNaN(v))return;o.arr[i]=v;r.value=v;render();});
 }
 function labels(){
-rows.forEach(o=>{if(o.lab=='ang')o.l.textContent=['Roll φ · x','Pitch θ · y','Yaw ψ · z'][o.i];else o.l.textContent='t'+AXN[o.i];});
+rows.forEach(o=>{if(o.lab=='ang')o.l.textContent=['Roll ϕ · x','Pitch θ · y','Yaw ψ · z'][o.i];else o.l.textContent='t'+AXN[o.i];});
 }
 function sync(){rows.forEach(o=>{o.r.value=o.arr[o.i];o.n.value=o.arr[o.i];});
 labels();}
@@ -143,8 +143,8 @@ for(let i=0;i<3;i++){for(let j=0;j<3;j++)m+='<span>'+f2(R[i][j])+'</span>';m+='<
 m+='<span class="m">0.00</span><span class="m">0.00</span><span class="m">0.00</span><span class="m">1.00</span>';
 document.getElementById('mx').innerHTML=m;
 const P1=W[6];
-document.getElementById('pt').textContent='P = ('+f2(V[6][0])+', '+f2(V[6][1])+', '+f2(V[6][2])+')  →  P′ = ('+f2(P1[0])+', '+f2(P1[1])+', '+f2(P1[2])+')';
-document.getElementById('fm').textContent='R = Rz(ψ) · Ry(θ) · Rx(φ)   p′ = R·p + t';
+document.getElementById('pt').textContent='p′ = ('+f2(V[6][0])+', '+f2(V[6][1])+', '+f2(V[6][2])+')  →  p = ('+f2(P1[0])+', '+f2(P1[1])+', '+f2(P1[2])+')';
+document.getElementById('fm').innerHTML='R = Rz(ψ) · Ry(θ) · Rx(ϕ)<br>p = R·p′ + t';
 const bb=st.ang[1]*D;
 document.getElementById('gl').hidden=!(Math.abs(Math.cos(bb))<0.02);
 }

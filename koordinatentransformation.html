@@ -10,33 +10,33 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1b19;--surface:#262522;--surface2:#2f2e2a;--text:#f1efe8;--text2:#b4b2a9;--border:#444441;--accent:#85b7eb;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#1c1b19;--surface:#262522;--surface2:#2f2e2a;--text:#f1efe8;--text2:#b4b2a9;--border:#444441;--accent:#85b7eb;color-scheme:dark}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-main{max-width:980px;margin:0 auto;padding:20px 16px 32px}
+body{margin:0;background:var(--bg);color:var(--text);font:24px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1280px;margin:0 auto;padding:20px 16px 32px}
 h1{font-size:22px;font-weight:600;margin:0 0 4px}
 p.lead{margin:0 0 16px;color:var(--text2);font-size:15px}
-.app{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:start}
-@media (max-width:760px){.app{grid-template-columns:minmax(0,1fr)}}
+.app{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.app{grid-template-columns:minmax(0,1fr)}}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px}
 .card svg{width:100%;display:block;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
-.hint{font-size:12px;color:var(--text2);text-align:center;margin-top:2px}
+.hint{font-size:18px;color:var(--text2);text-align:center;margin-top:2px}
 .pnl{display:flex;flex-direction:column;gap:12px}
-.pnl h2{font-size:14px;font-weight:600;margin:0 0 6px}
+.pnl h2{font-size:21px;font-weight:600;margin:0 0 6px}
 .sel{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-select,input[type=number],button{font:inherit;font-size:14px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 8px;min-height:34px;max-width:100%}
+select,input[type=number],button{font:inherit;font-size:21px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;min-height:48px;max-width:100%}
 button{cursor:pointer}
 button:active{transform:scale(.98)}
-.row{display:grid;grid-template-columns:96px minmax(0,1fr) 62px;gap:8px;align-items:center;margin:2px 0}
-.row label{font-size:13px;color:var(--text2)}
+.row{display:grid;grid-template-columns:118px minmax(0,1fr) 62px;gap:6px;padding-right:14px;align-items:center;margin:2px 0}
+.row label{font-size:20px;color:var(--text2)}
 .row input[type=range]{width:100%;min-width:0;height:30px}
-.row input[type=number]{width:62px;padding:4px 6px}
+.row input[type=number]{width:62px;padding:4px 6px;font-size:14px;min-height:34px}
 .pre{display:flex;flex-wrap:wrap;gap:6px}
-.mx{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 4px;font:13px ui-monospace,Menlo,monospace;text-align:right}
+.mx{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 6px;font:20px ui-monospace,Menlo,monospace;text-align:right}
 .mx span.t{color:var(--accent);font-weight:600}
 .mx span.m{color:var(--text2)}
-.fm{font-size:13px;color:var(--text2);margin:0 0 8px;overflow-wrap:anywhere}
-.pt{font:13px ui-monospace,Menlo,monospace;margin-top:8px;overflow-wrap:anywhere}
-.warn{background:var(--surface2);border-left:3px solid #BA7517;border-radius:0 8px 8px 0;padding:8px 10px;font-size:13px}
-.lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text2);margin-top:6px}
+.fm{font-size:20px;color:var(--text2);margin:0 0 8px;overflow-wrap:anywhere}
+.pt{font:20px ui-monospace,Menlo,monospace;margin-top:8px;overflow-wrap:anywhere}
+.warn{background:var(--surface2);border-left:3px solid #BA7517;border-radius:0 8px 8px 0;padding:8px 10px;font-size:20px}
+.lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:18px;color:var(--text2);margin-top:6px}
 .lg i{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle;border-radius:2px}
 </style>
 </head>
@@ -45,13 +45,16 @@ button:active{transform:scale(.98)}
 <h1>Koordinatentransformation eines Quaders</h1>
 <p class="lead">Stelle Roll-, Pitch- und Yaw-Winkel sowie die Verschiebung ein. Gestrichelt ist die Ausgangslage, farbig die Endlage mit dem mitgedrehten Koordinatensystem x′, y′, z′. Ziehe in der Grafik, um die Ansicht zu drehen.</p>
 <div class="app">
+<div>
 <div class="card">
 <svg id="v" viewBox="0 0 640 440" role="img" aria-label="Quader in Ausgangs- und Endlage"></svg>
 <div class="hint">Ansicht drehen: Finger oder Maus ziehen</div>
 <div class="lg">
 <span><i style="background:#D85A30"></i>x</span><span><i style="background:#639922"></i>y</span><span><i style="background:#378ADD"></i>z</span>
-<span>Gestrichelt: Ausgangslage</span><span>Eckpunkt: hohl p′ (Körpersystem), gefüllt p (Weltsystem)</span>
+<span>Gestrichelt: Ausgangslage</span>
 </div>
+</div>
+<div class="pre" style="margin-top:10px;justify-content:flex-end"><button data-p="reset">Zurücksetzen</button></div>
 </div>
 <div class="pnl">
 <div class="card">
@@ -70,9 +73,7 @@ button:active{transform:scale(.98)}
 <div class="mx" id="mx"></div>
 <div class="pt" id="pt"></div>
 </div>
-<div class="pre">
-<button data-p="reset">Zurücksetzen</button>
-</div>
+
 </div>
 </div>
 </main>
@@ -124,7 +125,7 @@ const W=V.map(v=>{const q=app(R,v);return [q[0]+t[0],q[1]+t[1],q[2]+t[2]];});
 let s='';
 [[2.6,0,0,'X'],[0,2.6,0,'Y'],[0,0,2.2,'Z']].forEach((e,k)=>{
 const o=sc([0,0,0]),p=sc(e);
-s+='<line x1="'+o[0]+'" y1="'+o[1]+'" x2="'+p[0]+'" y2="'+p[1]+'" stroke="'+COL[k]+'" stroke-width="1.2" stroke-opacity=".55"/><text x="'+(p[0]+5)+'" y="'+(p[1]+4)+'" font-size="12" style="fill:var(--text2)">'+e[3]+'</text>';});
+s+='<line x1="'+o[0]+'" y1="'+o[1]+'" x2="'+p[0]+'" y2="'+p[1]+'" stroke="'+COL[k]+'" stroke-width="1.2" stroke-opacity=".55"/><text x="'+(p[0]+5)+'" y="'+(p[1]+4)+'" font-size="18" style="fill:var(--text2)">'+e[3]+'</text>';});
 E.forEach(e=>{const p=sc(V[e[0]]),q=sc(V[e[1]]);
 s+='<line x1="'+p[0]+'" y1="'+p[1]+'" x2="'+q[0]+'" y2="'+q[1]+'" stroke-width="1.2" stroke-dasharray="4 4" style="stroke:var(--text2)"/>';});
 const o0=sc([0,0,0]),o1=sc(t);
@@ -136,7 +137,7 @@ s+='<line x1="'+P[0]+'" y1="'+P[1]+'" x2="'+Q[0]+'" y2="'+Q[1]+'" stroke-width="
 const oo=sc(t);
 [[1.6,0,0,"x′"],[0,1.4,0,"y′"],[0,0,1.3,"z′"]].forEach((e,k)=>{
 const q=app(R,e),p=sc([q[0]+t[0],q[1]+t[1],q[2]+t[2]]);
-s+='<line x1="'+oo[0]+'" y1="'+oo[1]+'" x2="'+p[0]+'" y2="'+p[1]+'" stroke="'+COL[k]+'" stroke-width="3" stroke-linecap="round"/><circle cx="'+p[0]+'" cy="'+p[1]+'" r="3.5" fill="'+COL[k]+'"/><text x="'+(p[0]+(p[0]>=oo[0]?7:-18))+'" y="'+(p[1]+4)+'" font-size="13" font-weight="600" fill="'+COL[k]+'">'+e[3]+'</text>';});
+s+='<line x1="'+oo[0]+'" y1="'+oo[1]+'" x2="'+p[0]+'" y2="'+p[1]+'" stroke="'+COL[k]+'" stroke-width="3" stroke-linecap="round"/><circle cx="'+p[0]+'" cy="'+p[1]+'" r="3.5" fill="'+COL[k]+'"/><text x="'+(p[0]+(p[0]>=oo[0]?8:-32))+'" y="'+(p[1]+4)+'" font-size="20" font-weight="600" fill="'+COL[k]+'">'+e[3]+'</text>';});
 document.getElementById('v').innerHTML=s;
 let m='';
 for(let i=0;i<3;i++){for(let j=0;j<3;j++)m+='<span>'+f2(R[i][j])+'</span>';m+='<span class="t">'+f2(t[i])+'</span>';}

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quaternion und Drehachse</title>
+<style>
+:root{--bg:#fbfaf8;--card:#f0eee9;--text:#1f1e1c;--muted:#66645e;--axis:#534AB7;--cube:#0F6E56;--line:#d3d1c7}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1b19;--card:#2a2926;--text:#f1efe8;--muted:#a8a69d;--axis:#9d96ee;--cube:#4cc4a0;--line:#4a4944}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:560px;margin:0 auto;padding:24px 16px 40px}
+h1{font-size:22px;font-weight:500;margin:0 0 6px}
+.lead{color:var(--muted);font-size:15px;margin:0 0 16px}
+svg{display:block;width:100%;height:auto}
+.axis{stroke:var(--axis)}.axisf{fill:var(--axis)}
+.cube{stroke:var(--cube)}.cubef{fill:var(--cube)}
+.legend{font-size:13px}
+.ctrl{display:grid;grid-template-columns:auto 1fr 44px;gap:8px 10px;align-items:center;margin:8px 0 14px;font-size:14px}
+.ctrl span:first-child{color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--axis)}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.box{background:var(--card);border-radius:8px;padding:10px 12px}
+.box small{display:block;font-size:12px;color:var(--muted)}
+.box b{font-size:20px;font-weight:500}
+.mono{margin-top:10px;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+#note{margin-top:8px;font-size:13px;color:var(--muted);min-height:20px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+button{font:inherit;font-size:14px;color:var(--text);background:transparent;border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{background:var(--card)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--axis);outline-offset:2px}
+.formula{margin-top:20px;font-size:15px}
+.formula code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px}
+</style>
+</head>
+<body>
+<main>
+<h1>Quaternion und Drehachse</h1>
+<p class="lead">Wähle eine Achse und einen Winkel. Das Quaternion q kodiert beides, den Winkel allerdings halbiert.</p>
+
+<svg id="sv" viewBox="0 0 360 310" role="img" aria-label="Würfel, der um eine wählbare Achse gedreht wird"></svg>
+
+<div class="ctrl">
+<span>Achse φ</span><input type="range" id="a" min="0" max="360" value="40" step="1"><span id="ao">40°</span>
+<span>Achse ψ</span><input type="range" id="b" min="-90" max="90" value="35" step="1"><span id="bo">35°</span>
+<span>Winkel θ</span><input type="range" id="t" min="0" max="360" value="90" step="1"><span id="to">90°</span>
+</div>
+
+<div class="row">
+<div class="box"><small>Skalarteil w = cos(θ/2)</small><b id="w"></b></div>
+<div class="box"><small>Faktor sin(θ/2)</small><b id="s"></b></div>
+</div>
+<div class="box mono">
+<div>n = <span id="n"></span></div>
+<div>q = <span id="q"></span></div>
+</div>
+<div id="note" aria-live="polite"></div>
+
+<div class="btns">
+<button id="px">x-Achse</button><button id="py">y-Achse</button><button id="pz">z-Achse</button><button id="p360">θ = 360°</button>
+</div>
+
+<p class="formula">q = cos(θ/2) + sin(θ/2) · (nₓ·i + n<sub>y</sub>·j + n<sub>z</sub>·k)<br>
+Gedreht wird mit <code>v′ = q · v · q*</code>.</p>
+</main>
+
+<script>
+var svg=document.getElementById('sv'),NS='http://www.w3.org/2000/svg';
+var A=document.getElementById('a'),B=document.getElementById('b'),T=document.getElementById('t');
+function f(x){return (Math.round(x*100)/100).toFixed(2).replace('.',',')}
+function proj(v){var ya=0.55,pb=0.35;
+var x1=v[0]*Math.cos(ya)+v[2]*Math.sin(ya),z1=-v[0]*Math.sin(ya)+v[2]*Math.cos(ya);
+var y2=v[1]*Math.cos(pb)-z1*Math.sin(pb);
+return [180+x1*105,135-y2*105]}
+function rot(q,v){var w=q[0],u=[q[1],q[2],q[3]];
+var c1=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+var c2=[u[1]*c1[2]-u[2]*c1[1],u[2]*c1[0]-u[0]*c1[2],u[0]*c1[1]-u[1]*c1[0]];
+return [v[0]+2*w*c1[0]+2*c2[0],v[1]+2*w*c1[1]+2*c2[1],v[2]+2*w*c1[2]+2*c2[2]]}
+function el(n,at){var e=document.createElementNS(NS,n);for(var k in at)e.setAttribute(k,at[k]);svg.appendChild(e);return e}
+var V=[],h=0.6;for(var i=0;i<8;i++)V.push([(i&1?h:-h),(i&2?h:-h),(i&4?h:-h)]);
+var E=[[0,1],[2,3],[4,5],[6,7],[0,2],[1,3],[4,6],[5,7],[0,4],[1,5],[2,6],[3,7]];
+function draw(){
+var a=A.value*Math.PI/180,b=B.value*Math.PI/180,th=T.value*Math.PI/180;
+var n=[Math.cos(b)*Math.cos(a),Math.sin(b),Math.cos(b)*Math.sin(a)];
+var w=Math.cos(th/2),s=Math.sin(th/2),q=[w,s*n[0],s*n[1],s*n[2]];
+while(svg.firstChild)svg.removeChild(svg.firstChild);
+var p0=proj([-n[0]*1.5,-n[1]*1.5,-n[2]*1.5]),p1=proj([n[0]*1.5,n[1]*1.5,n[2]*1.5]);
+el('line',{x1:p0[0],y1:p0[1],x2:p1[0],y2:p1[1],'class':'axis','stroke-width':2.5});
+el('circle',{cx:p1[0],cy:p1[1],r:5,'class':'axisf'});
+var R=V.map(function(v){return proj(rot(q,v))});
+E.forEach(function(e){el('line',{x1:R[e[0]][0],y1:R[e[0]][1],x2:R[e[1]][0],y2:R[e[1]][1],'class':'cube','stroke-width':2})});
+el('circle',{cx:R[7][0],cy:R[7][1],r:5,'class':'cubef'});
+var t1=el('text',{x:352,y:280,'text-anchor':'end','class':'legend axisf'});t1.textContent='Violett: Drehachse n';
+var t2=el('text',{x:352,y:298,'text-anchor':'end','class':'legend cubef'});t2.textContent='Grün: gedrehter Würfel';
+document.getElementById('ao').textContent=A.value+'°';
+document.getElementById('bo').textContent=B.value+'°';
+document.getElementById('to').textContent=T.value+'°';
+document.getElementById('w').textContent=f(w);
+document.getElementById('s').textContent=f(s);
+document.getElementById('n').textContent='('+f(n[0])+' | '+f(n[1])+' | '+f(n[2])+')';
+document.getElementById('q').textContent=f(q[0])+' '+(q[1]<0?'−':'+')+' '+f(Math.abs(q[1]))+'i '+(q[2]<0?'−':'+')+' '+f(Math.abs(q[2]))+'j '+(q[3]<0?'−':'+')+' '+f(Math.abs(q[3]))+'k';
+var nt=document.getElementById('note');
+if(+T.value===360)nt.textContent='Nach 360° steht der Würfel wieder wie vorher, aber q = −1. Die Quaternionen q und −q beschreiben dieselbe Drehung.';
+else if(+T.value===0)nt.textContent='Keine Drehung: q = 1 (Einheitsquaternion).';
+else nt.textContent='Die Länge von q bleibt immer 1: w² + x² + y² + z² = 1.';
+}
+function set(x,y,z){A.value=x;B.value=y;if(z!==undefined)T.value=z;draw()}
+[A,B,T].forEach(function(e){e.addEventListener('input',draw)});
+document.getElementById('px').onclick=function(){set(0,0)};
+document.getElementById('py').onclick=function(){set(0,90)};
+document.getElementById('pz').onclick=function(){set(90,0)};
+document.getElementById('p360').onclick=function(){T.value=360;draw()};
+draw();
+</script>
+</body>
+</html>

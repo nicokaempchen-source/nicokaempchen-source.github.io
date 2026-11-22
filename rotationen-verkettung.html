@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rotationen">
+<title>Rotationen verketten: raumfest und körperfest</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+ color-scheme:light;--bg:#f7f7f4;--fg:#1c1c1a;--mut:#66665f;--card:#ffffff;--line:#d8d8d0;--acc:#c2410c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#181816;--fg:#ecece6;--mut:#a3a39b;--card:#23231f;--line:#3a3a35;--acc:#fb923c}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#181816;--fg:#ecece6;--mut:#a3a39b;--card:#23231f;--line:#3a3a35;--acc:#fb923c}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+/* Daumen- und Spurgröße der Regler: größer auf Touch-Geräten (iPad) */
+:root{--th:18px;--tr:4px}
+@media (pointer:coarse){:root{--th:32px;--tr:8px}}
+*{box-sizing:border-box}
+body{margin:0 auto;max-width:1200px;padding:16px max(16px,env(safe-area-inset-right)) 16px max(16px,env(safe-area-inset-left));background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+h1{font-size:20px;margin:0 0 4px}
+.sub{margin:0 0 14px;color:var(--mut)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px 40px}
+label{display:block;font-size:15px;color:var(--mut)}
+label b{color:var(--fg);font-variant-numeric:tabular-nums}
+/* Regler mit fester Daumenbreite (--th) und ohne Rand, damit die Markierungen in jedem Browser exakt passen */
+input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:calc(var(--th) + 2px);margin:0;padding:0;background:transparent;cursor:pointer;touch-action:pan-y}
+input[type=range]::-webkit-slider-runnable-track{height:var(--tr);border-radius:calc(var(--tr) / 2);background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:var(--th);height:var(--th);margin-top:calc((var(--tr) - var(--th)) / 2);border-radius:50%;border:0;background:var(--acc)}
+input[type=range]::-moz-range-track{height:var(--tr);border-radius:calc(var(--tr) / 2);background:var(--line)}
+input[type=range]::-moz-range-thumb{width:var(--th);height:var(--th);box-sizing:border-box;border-radius:50%;border:0;background:var(--acc)}
+.ticks{position:relative;height:26px;margin-top:2px;pointer-events:none}
+.tk{position:absolute;top:9px;left:calc(var(--th) / 2 + (100% - var(--th)) * var(--p));transform:translateX(-50%);font-size:13px;line-height:1;color:var(--mut);white-space:nowrap}
+.tk::before{content:"";position:absolute;left:50%;top:-9px;height:6px;border-left:1px solid var(--mut)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+button{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+button:active{filter:brightness(.88);transform:translateY(1px)}
+/* Touch: Schaltflächen mindestens 44 px hoch (Apple-Richtlinie), Schrift 16 px */
+@media (pointer:coarse){button{min-height:44px;padding:10px 16px;font-size:16px}.row{gap:10px}}
+button.sec{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:699px){.grid{grid-template-columns:1fr}}
+h2{font-size:20px;margin:0 0 4px}
+.tag{font-size:15px;color:var(--mut);margin:0 0 14px}
+/* Höhe passt sich dem Fenster an (Hoch-/Querformat), ohne zu klein oder zu groß zu werden */
+canvas{width:100%;height:clamp(300px,calc(100vh - 560px),420px);display:block;touch-action:none;cursor:grab;border-radius:8px;background:rgba(128,128,128,.08);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* Schmales Fenster (Split View, Slide Over): Ansichten untereinander. Senkrechtes Wischen scrollt dann die Seite, sonst wäre sie über der Zeichenfläche blockiert. Muss nach der canvas-Regel stehen. */
+@media(max-width:699px){canvas{touch-action:pan-y;height:320px}}
+.cap{min-height:48px;margin-top:8px;font-size:15px}
+.fm{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;color:var(--mut);min-height:20px}
+.ok{font-weight:600;color:var(--acc)}
+</style>
+</head>
+<body>
+<h1>Drei Rotationen, zwei Lesearten, eine Matrix</h1>
+<p class="sub">R = R<sub>z</sub>(γ) · R<sub>y</sub>(β) · R<sub>x</sub>(α). Von <b>hinten</b> gelesen (rechts nach links): Drehungen um <b>raumfeste</b> Achsen. Von <b>vorne</b> gelesen (links nach rechts): Drehungen um <b>körperfeste</b> Achsen. Ziehen dreht die Kamera.</p>
+
+<div class="panel">
+  <div class="ctrl">
+    <label>α, Drehung um x: <b id="va">0</b>°<input id="a" type="range" min="-180" max="180" value="0"><div class="ticks"></div></label>
+    <label>β, Drehung um y: <b id="vb">0</b>°<input id="b" type="range" min="-180" max="180" value="0"><div class="ticks"></div></label>
+    <label>γ, Drehung um z: <b id="vg">0</b>°<input id="g" type="range" min="-180" max="180" value="0"><div class="ticks"></div></label>
+    <label>Fortschritt t: <b id="vt">0.00</b> von 3<input id="t" type="range" min="0" max="3" step="0.01" value="0"></label>
+  </div>
+  <div class="row">
+    <button id="play">▶ Abspielen</button>
+    <button class="sec" data-t="0">Start</button>
+    <button class="sec" data-t="1">Nach Schritt 1</button>
+    <button class="sec" data-t="2">Nach Schritt 2</button>
+    <button class="sec" data-t="3">Nach Schritt 3</button>
+    <button class="sec" id="all90">Alle Winkel 90°</button>
+    <button class="sec" id="reset">Zurücksetzen</button>
+  </div>
+  <div id="eq" class="ok" style="margin-top:10px;min-height:22px"></div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Von hinten gelesen: raumfest</h2>
+    <div class="tag">Erst R<sub>x</sub>, dann R<sub>y</sub>, dann R<sub>z</sub>, jeweils um die festen Weltachsen.</div>
+    <canvas id="c1"></canvas>
+    <div class="cap" id="cap1"></div>
+    <div class="fm" id="fm1"></div>
+  </div>
+  <div class="panel">
+    <h2>Von vorne gelesen: körperfest</h2>
+    <div class="tag">Erst R<sub>z</sub>, dann um die neue y′-Achse, dann um die neue x″-Achse.</div>
+    <canvas id="c2"></canvas>
+    <div class="cap" id="cap2"></div>
+    <div class="fm" id="fm2"></div>
+  </div>
+</div>
+
+<div class="panel">
+  <b>Legende:</b> graue gestrichelte Linien sind die festen Weltachsen X, Y, Z. Der Körper hat eine helle Seite (+) und eine dunkle Seite (−) je Achse; die Pfeile x′ (rot), y′ (grün), z′ (blau) sind seine Achsen. Orange ist die Achse der aktuellen Drehung, die gestrichelte Kontur ist die Stellung zu Beginn dieses Schritts.
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const I3=[[1,0,0],[0,1,0],[0,0,1]];
+const mul=(A,B)=>A.map(r=>[0,1,2].map(j=>r[0]*B[0][j]+r[1]*B[1][j]+r[2]*B[2][j]));
+const app=(M,v)=>M.map(r=>r[0]*v[0]+r[1]*v[1]+r[2]*v[2]);
+function Rot(ax,deg){
+  const a=deg*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+  if(ax==='x')return[[1,0,0],[0,c,-s],[0,s,c]];
+  if(ax==='y')return[[c,0,s],[0,1,0],[-s,0,c]];
+  return[[c,-s,0],[s,c,0],[0,0,1]];
+}
+const UNIT={x:[1,0,0],y:[0,1,0],z:[0,0,1]};
+const GREEK={x:'α',y:'β',z:'γ'};
+const ORDER={space:['x','y','z'],body:['z','y','x']};
+const ang={x:0,y:0,z:0};
+let t=0,yaw=-0.7,pitch=0.5,playing=false,last=0;
+
+// Zustand bei Fortschritt t (0..3): Schritt k, Anteil f, Matrix vor dem Schritt, Drehachse, aktuelle Matrix
+function state(mode,t){
+  const s=ORDER[mode];
+  const k=Math.max(0,Math.min(Math.ceil(t)-1,2));
+  const f=t-k;
+  let M=I3;
+  for(let j=0;j<k;j++){const Rj=Rot(s[j],ang[s[j]]);M=mode==='space'?mul(Rj,M):mul(M,Rj);}
+  const ax=s[k],Rp=Rot(ax,f*ang[ax]);
+  return{k,f,ax,prev:M,
+    axis:mode==='space'?UNIT[ax]:app(M,UNIT[ax]),
+    M:mode==='space'?mul(Rp,M):mul(M,Rp)};
+}
+
+// Kamera: x nach rechts, z nach oben, y in die Tiefe (grösser = weiter weg)
+function proj(p,w,h){
+  const c=Math.cos(yaw),s=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+  const x1=p[0]*c-p[1]*s,y1=p[0]*s+p[1]*c;
+  const d=y1*cp-p[2]*sp,up=y1*sp+p[2]*cp;
+  const S=Math.min(w,h)/5,f=1/(1+d*0.06);
+  return[w/2+x1*S*f,h/2+6-up*S*f,d];
+}
+
+const HALF=[0.9,0.6,0.35];
+const BASE=[[225,65,65],[50,165,85],[65,105,235]];
+const FACES=[];
+for(let a=0;a<3;a++)for(const sg of[-1,1]){
+  const b=(a+1)%3,c=(a+2)%3;
+  const quad=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([u,v])=>{const p=[0,0,0];p[a]=sg*HALF[a];p[b]=u*HALF[b];p[c]=v*HALF[c];return p;});
+  const k=sg>0?1:0.5;
+  FACES.push({a,sg,quad,col:`rgb(${BASE[a].map(x=>Math.round(x*k)).join(',')})`,
+    ctr:(()=>{const p=[0,0,0];p[a]=sg*HALF[a];return p;})()});
+}
+const EDGES=[];
+for(let i=0;i<8;i++)for(const m of[1,2,4])if(!(i&m))EDGES.push([i,i|m]);
+const VERT=[...Array(8).keys()].map(i=>[(i&4?1:-1)*HALF[0],(i&2?1:-1)*HALF[1],(i&1?1:-1)*HALF[2]]);
+
+function line(ctx,a,b,col,wd,dash){ctx.strokeStyle=col;ctx.lineWidth=wd;ctx.setLineDash(dash||[]);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();ctx.setLineDash([]);}
+function arrow(ctx,a,b,col,wd){
+  line(ctx,a,b,col,wd);
+  const an=Math.atan2(b[1]-a[1],b[0]-a[0]);
+  ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(b[0],b[1]);
+  ctx.lineTo(b[0]-10*Math.cos(an-0.4),b[1]-10*Math.sin(an-0.4));
+  ctx.lineTo(b[0]-10*Math.cos(an+0.4),b[1]-10*Math.sin(an+0.4));ctx.fill();
+}
+
+function draw(cv,mode){
+  const dpr=Math.min(window.devicePixelRatio||1,3),w=cv.clientWidth||320,h=cv.clientHeight||320;
+  const W=Math.round(w*dpr),H=Math.round(h*dpr);
+  if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}   // Puffer nur bei Größenänderung neu anlegen (schneller auf dem iPad)
+  const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+  const st=state(mode,t),M=st.M;
+  const P=p=>proj(p,w,h),o=P([0,0,0]);
+  // Beschriftung innerhalb der Zeichenfläche halten
+  const lbl=(txt,x,y)=>{const tw=ctx.measureText(txt).width;ctx.fillText(txt,Math.max(4,Math.min(w-tw-4,x)),Math.max(22,Math.min(h-6,y)));};
+  // Weltachsen
+  for(const[n,v]of[['X',[1.9,0,0]],['Y',[0,1.9,0]],['Z',[0,0,1.9]]]){
+    const e=P(v);line(ctx,o,e,'rgba(130,130,125,.8)',1.5,[5,4]);
+    ctx.fillStyle='rgba(130,130,125,1)';ctx.font='bold 22px system-ui,sans-serif';lbl(n,e[0]+6,e[1]-6);
+  }
+  // Kontur der Stellung vor diesem Schritt
+  if(t>0&&st.f<1){
+    const pv=VERT.map(v=>P(app(st.prev,v)));
+    for(const[i,j]of EDGES)line(ctx,pv[i],pv[j],'rgba(130,130,125,.8)',1,[3,3]);
+  }
+  // Körper (Flächen von hinten nach vorn)
+  const fs=FACES.map(F=>{const q=F.quad.map(p=>P(app(M,p)));return{F,q,z:q.reduce((s,p)=>s+p[2],0)/4};}).sort((a,b)=>b.z-a.z);
+  for(const{F,q}of fs){
+    ctx.fillStyle=F.col;ctx.strokeStyle='rgba(0,0,0,.55)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(q[0][0],q[0][1]);for(let i=1;i<4;i++)ctx.lineTo(q[i][0],q[i][1]);ctx.closePath();ctx.fill();ctx.stroke();
+  }
+  // Achsen des Körpers
+  for(const[col,e,lab]of[['#ef4444',UNIT.x,'x′'],['#22c55e',UNIT.y,'y′'],['#3b82f6',UNIT.z,'z′']]){
+    const tip=P(app(M,e.map(c=>c*1.55)));
+    arrow(ctx,o,tip,col,3);ctx.fillStyle=col;ctx.font='bold 22px system-ui,sans-serif';lbl(lab,tip[0]+6,tip[1]-6);
+  }
+  // aktuelle Drehachse
+  const a1=P(st.axis.map(c=>-c*2)),a2=P(st.axis.map(c=>c*2));
+  line(ctx,a1,a2,'#f97316',3.5);
+  // Label am negativen Ende der Drehachse: dort stehen keine Achsenbeschriftungen (X, Y, Z, x′, y′, z′ sitzen am positiven Ende)
+  ctx.fillStyle='#f97316';ctx.font='bold 18px system-ui,sans-serif';
+  const dxs=a1[0]-o[0],dys=a1[1]-o[1],tw=ctx.measureText('Drehachse').width;
+  lbl('Drehachse',dxs<0?a1[0]-tw-6:a1[0]+6,dys>0?a1[1]+20:a1[1]-8);
+
+  // Beschriftung
+  const s=ORDER[mode],cap=$(mode==='space'?'cap1':'cap2');
+  if(t<=0){cap.textContent='';}
+  else{
+    const k=st.k,pr=['','′','″'][k];
+    const where=mode==='space'?`raumfeste ${s[k].toUpperCase()}-Achse`:`körperfeste ${s[k]}${pr}-Achse`;
+    cap.innerHTML=`<b>Schritt ${k+1} von 3:</b> Drehung um die ${where}, ${GREEK[s[k]]} = ${ang[s[k]]}°. Fortschritt im Schritt: ${Math.round(st.f*100)} %.`;
+  }
+  const names=s.slice(0,st.k+1).map(a=>`R<sub>${a}</sub>(${GREEK[a]})`);
+  $(mode==='space'?'fm1':'fm2').innerHTML=t<=0?'':'R = '+(mode==='space'?names.reverse():names).join(' · ');
+}
+
+function render(){
+  draw($('c1'),'space');draw($('c2'),'body');
+  $('vt').textContent=t.toFixed(2);$('t').value=t;
+  const A=state('space',3).M,B=state('body',3).M;let m=0;
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++)m=Math.max(m,Math.abs(A[i][j]-B[i][j]));
+  $('eq').textContent=t>=3?`Endstellung links und rechts identisch (max. Abweichung der Matrizen ${m.toExponential(1)}).`:'';
+}
+// Zeichnen höchstens einmal pro Bildschirmaufbau, auch wenn Touch-Ereignisse schneller eintreffen
+let raf=0;
+function requestRender(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;render();});}
+function stop(){playing=false;$('play').textContent='▶ Abspielen';}
+// Markierungen unter den Winkelreglern: -180, -90, 0, 90, 180
+document.querySelectorAll('.ticks').forEach(el=>{
+  el.innerHTML=[-180,-90,0,90,180].map(v=>`<span class="tk" style="--p:${(v+180)/360}">${v<0?'−':''}${Math.abs(v)}°</span>`).join('');
+});
+// Einrasten bei -90, 0, 90 (±5°) nur beim Ziehen; Pfeiltasten bleiben frei, sonst käme man nicht aus der Zone heraus
+const SNAP=[-90,0,90],TOL=5,kbd={};
+for(const[id,ax]of[['a','x'],['b','y'],['g','z']]){
+  const el=$(id);
+  el.addEventListener('keydown',()=>{kbd[id]=true;});
+  el.addEventListener('keyup',()=>{kbd[id]=false;});
+  el.addEventListener('blur',()=>{kbd[id]=false;});
+  el.addEventListener('pointerdown',()=>{kbd[id]=false;});
+  el.oninput=()=>{
+    let v=+el.value;
+    if(!kbd[id]){const s=SNAP.find(p=>Math.abs(v-p)<=TOL);if(s!==undefined){v=s;el.value=v;}}
+    ang[ax]=v;$('v'+id).textContent=v;requestRender();
+  };
+}
+$('t').oninput=e=>{t=+e.target.value;stop();requestRender();};
+document.querySelectorAll('button[data-t]').forEach(b=>b.onclick=()=>{t=+b.dataset.t;stop();render();});
+function setAngles(x,y,z){ang.x=x;ang.y=y;ang.z=z;for(const[id,ax]of[['a','x'],['b','y'],['g','z']]){$(id).value=ang[ax];$('v'+id).textContent=ang[ax];}render();}
+$('all90').onclick=()=>{setAngles(90,90,90);};
+$('reset').onclick=()=>{t=0;stop();setAngles(0,0,0);};
+function tick(ts){if(!playing)return;t=Math.min(3,t+(ts-last)/1000*0.5);last=ts;render();if(t>=3)stop();else requestAnimationFrame(tick);}
+$('play').onclick=()=>{if(playing){stop();return;}if(t>=3)t=0;playing=true;$('play').textContent='❚❚ Pause';last=performance.now();requestAnimationFrame(tick);};
+for(const id of['c1','c2']){
+  // Nur ein Finger dreht die Kamera; weitere Finger (z. B. Handballen) werden ignoriert
+  const cv=$(id);let pid=null,px=0,py=0;
+  const end=e=>{if(e.pointerId!==pid)return;pid=null;cv.style.cursor='grab';};
+  cv.onpointerdown=e=>{if(pid!==null)return;pid=e.pointerId;px=e.clientX;py=e.clientY;try{cv.setPointerCapture(pid);}catch(_){}cv.style.cursor='grabbing';};
+  cv.onpointerup=end;cv.onpointercancel=end;cv.onlostpointercapture=end;
+  cv.oncontextmenu=e=>e.preventDefault();
+  cv.onpointermove=e=>{if(e.pointerId!==pid)return;yaw+=(e.clientX-px)*0.01;pitch=Math.max(-1.5,Math.min(1.5,pitch+(e.clientY-py)*0.01));px=e.clientX;py=e.clientY;requestRender();};
+}
+addEventListener('resize',render);
+render();
+</script>
+</body>
+</html>

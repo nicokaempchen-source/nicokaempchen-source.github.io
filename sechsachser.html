@@ -1,0 +1,161 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Roboter-Labor: 6-Achs-Kinematik</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#eef0f2;--pn:#fff;--tx:#1b1f23;--mu:#5d6670;--bd:#d3d8dd;--ac:#d9480f;--ok:#2b8a3e;--wa:#b86e00;--er:#c92a2a;--gr:#9aa3ad}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#14181c;--pn:#1d2329;--tx:#e6e9ec;--mu:#94a0ab;--bd:#323b44;--ac:#ff8a4c;--ok:#6fcf86;--wa:#f2b84b;--er:#ff7b7b;--gr:#5a6672}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#14181c;--pn:#1d2329;--tx:#e6e9ec;--mu:#94a0ab;--bd:#323b44;--ac:#ff8a4c;--ok:#6fcf86;--wa:#f2b84b;--er:#ff7b7b;--gr:#5a6672}
+html,body{height:100%;margin:0;overscroll-behavior:none}
+body{background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+.app{display:flex;height:100vh;height:100dvh;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);box-sizing:border-box}
+#view{flex:1;position:relative;min-width:0;touch-action:none;cursor:grab}
+#view canvas{display:block;width:100%;height:100%}
+#hint{position:absolute;left:16px;bottom:12px;color:var(--mu);font-size:13px;pointer-events:none}
+aside{width:400px;max-width:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--pn);border-left:1px solid var(--bd);padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px));box-sizing:border-box}
+h1{font-size:22px;margin:0 0 4px}
+h2{font-size:16px;margin:22px 0 8px}
+.row{display:grid;grid-template-columns:116px 1fr 56px;gap:10px;align-items:center;margin:4px 0}
+.row label{font-size:15px}
+.row output{text-align:right;font-variant-numeric:tabular-nums;font-size:15px}
+.row.lim output{color:var(--er);font-weight:700}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;margin:0;background:transparent;touch-action:pan-y;accent-color:var(--ac)}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--bd)}
+input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--bd)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;margin-top:-12px;border-radius:50%;background:var(--ac);border:3px solid var(--pn);box-shadow:0 0 0 1px var(--ac)}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--ac);border:3px solid var(--pn);box-shadow:0 0 0 1px var(--ac)}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+button{font:inherit;font-size:16px;min-height:48px;padding:0 18px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:10px;cursor:pointer;touch-action:manipulation}
+button:active{border-color:var(--ac)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.chk{display:flex;gap:12px;align-items:center;font-size:16px;min-height:44px;touch-action:manipulation}
+.chk input{width:26px;height:26px;margin:0;accent-color:var(--ac)}
+#status{border-left:4px solid var(--ok);background:var(--bg);padding:10px 12px;border-radius:0 8px 8px 0;font-size:15px;margin-top:12px}
+#status.wa{border-color:var(--wa)}#status.er{border-color:var(--er)}
+#status div+div{margin-top:6px}
+@media(orientation:portrait){.app{flex-direction:column}#view{flex:none;height:52%}aside{width:auto;flex:1;border-left:0;border-top:1px solid var(--bd)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="view"><div id="hint">Ziehen: drehen · Mausrad / Pinch: zoomen</div></div>
+  <aside>
+    <h1>Roboter-Labor</h1>
+    <h2>Gelenkwinkel</h2>
+    <div id="sl"></div>
+    <div id="status"></div>
+    <h2>Posen und Bewegung</h2>
+    <div class="btns">
+      <button data-p="home">Home</button><button data-s="A">Set Pose A</button><button data-s="B">Set Pose B</button><button id="anim">PTP A ⇄ B</button>
+    </div>
+    <h2>Anzeige</h2>
+    <label class="chk"><input type="checkbox" id="trace" checked> TCP-Spur zeichnen</label>
+    <label class="chk"><input type="checkbox" id="axes"> Gelenkachsen anzeigen</label>
+    <div class="btns" style="margin-top:6px"><button id="clr">Spur löschen</button></div>
+  </aside>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const J=[["J1 Basis",-170,170],["J2 Schulter",-110,110],["J3 Ellbogen",-140,140],["J4 Unterarm",-180,180],["J5 Handgelenk",-115,115],["J6 Flansch",-180,180]];
+const P={home:[0,20,-50,0,30,0],A:[-60,45,-70,0,60,0],B:[70,30,-30,90,-40,120]};
+const q=P.home.slice(), D=Math.PI/180;
+const view=document.getElementById("view");
+const R=new THREE.WebGLRenderer({antialias:true,alpha:true});
+R.setPixelRatio(Math.min(devicePixelRatio,2));view.appendChild(R.domElement);
+const S=new THREE.Scene(),C=new THREE.PerspectiveCamera(45,1,.1,100);
+S.add(new THREE.AmbientLight(0xffffff,.7));
+const dl=new THREE.DirectionalLight(0xffffff,.8);dl.position.set(3,6,4);S.add(dl);
+const grid=new THREE.GridHelper(6,12,0x8a949e,0xaab2ba);S.add(grid);
+
+const mOr=new THREE.MeshStandardMaterial({color:0xe8590c,roughness:.5}),
+ mGr=new THREE.MeshStandardMaterial({color:0x6c7680,roughness:.6}),
+ mDk=new THREE.MeshStandardMaterial({color:0x2d3339,roughness:.6});
+function cyl(r,h,m,rotX){const g=new THREE.CylinderGeometry(r,r,h,24);const o=new THREE.Mesh(g,m);if(rotX)o.rotation.x=Math.PI/2;return o}
+function link(len,w,m){const o=new THREE.Mesh(new THREE.BoxGeometry(w,len,w),m);o.position.y=len/2;return o}
+const ax=[];
+function joint(parent,y){const g=new THREE.Group();g.position.y=y;parent.add(g);const a=new THREE.AxesHelper(.4);a.visible=false;g.add(a);ax.push(a);return g}
+
+const base=cyl(.45,.3,mGr);base.position.y=.15;S.add(base);
+const j1=joint(S,.3);
+const col=cyl(.3,.4,mOr);col.position.y=.2;j1.add(col);
+const j2=joint(j1,.4);j2.add(cyl(.2,.5,mGr,true));
+j2.add(link(1,.22,mOr));
+const j3=joint(j2,1);j3.add(cyl(.17,.4,mGr,true));
+j3.add(link(.9,.18,mOr));
+const j4=joint(j3,.9);j4.add(cyl(.12,.2,mDk));
+const j5=joint(j4,.15);j5.add(cyl(.11,.3,mGr,true));
+const j6=joint(j5,.2);j6.add(cyl(.09,.08,mDk));
+const neck=cyl(.08,.2,mDk);neck.position.y=-.1;j6.add(neck);
+const tool=link(.18,.05,mDk);tool.position.y=.04;j6.add(tool);
+const f1=new THREE.Mesh(new THREE.BoxGeometry(.03,.12,.03),mDk);f1.position.set(.06,.2,0);j6.add(f1);
+const f2=f1.clone();f2.position.x=-.06;j6.add(f2);
+const bar=new THREE.Mesh(new THREE.BoxGeometry(.15,.04,.04),mDk);bar.position.y=.145;j6.add(bar);
+const tcp=new THREE.Mesh(new THREE.SphereGeometry(.05,16,12),new THREE.MeshBasicMaterial({color:0xe03131}));
+tcp.position.y=.22;j6.add(tcp);
+
+const N=2000,pos=new Float32Array(N*3),tg=new THREE.BufferGeometry();
+tg.setAttribute("position",new THREE.BufferAttribute(pos,3));tg.setDrawRange(0,0);
+const tl=new THREE.Line(tg,new THREE.LineBasicMaterial({color:0xe03131}));tl.frustumCulled=false;S.add(tl);
+let cnt=0,last=null;
+
+const sl=document.getElementById("sl"),inp=[],out=[],rows=[];
+J.forEach((j,i)=>{const r=document.createElement("div");r.className="row";
+ r.innerHTML=`<label for="s${i}">${j[0]}</label><input type="range" id="s${i}" min="${j[1]}" max="${j[2]}" step="1" value="${q[i]}"><output></output>`;
+ sl.appendChild(r);rows.push(r);inp.push(r.querySelector("input"));out.push(r.querySelector("output"));
+ inp[i].addEventListener("input",()=>{stopAnim();q[i]=+inp[i].value;upd()})});
+
+const tr=document.getElementById("trace");
+function upd(){
+ j1.rotation.y=q[0]*D;j2.rotation.z=q[1]*D;j3.rotation.z=q[2]*D;j4.rotation.y=q[3]*D;j5.rotation.z=q[4]*D;j6.rotation.y=q[5]*D;
+ S.updateMatrixWorld(true);
+ const p=new THREE.Vector3();tcp.getWorldPosition(p);
+ const Z=p.y;
+ const msgs=[];let lvl=0;
+ q.forEach((v,i)=>{const lim=Math.abs(v)>=J[i][2]-2;rows[i].classList.toggle("lim",lim);out[i].textContent=Math.round(v)+"°";inp[i].value=v;
+  if(lim){msgs.push(`${J[i][0]} steht an der Gelenkgrenze (±${J[i][2]}°).`);lvl=Math.max(lvl,1)}});
+ if(Math.abs(q[4])<6){msgs.push("Handgelenks-Singularität: J4 und J6 drehen um dieselbe Achse. Eine Drehung lässt sich nicht mehr eindeutig auf beide verteilen.");lvl=2}
+ if(Math.abs(q[2])<6){msgs.push("Ellbogen-Singularität: Der Arm ist gestreckt. Der TCP kann sich in Armrichtung nicht mehr weiter bewegen.");lvl=2}
+ if(Z<.05){msgs.push("Der TCP berührt den Boden oder ist darunter.");lvl=Math.max(lvl,1)}
+ const st=document.getElementById("status");st.className=lvl==2?"er":lvl==1?"wa":"";
+ st.innerHTML=msgs.length?msgs.map(m=>`<div>${m}</div>`).join(""):"<div>Keine Singularität und keine Gelenkgrenze erreicht.</div>";
+ if(tr.checked&&(!last||last.distanceTo(p)>.015)){const k=cnt%N;pos.set([p.x,p.y,p.z],k*3);cnt++;last=p.clone();
+  if(cnt<=N){tg.setDrawRange(0,cnt)}else{/* Ringpuffer: älteste Punkte überschreiben */tg.setDrawRange(0,N)}tg.attributes.position.needsUpdate=true}
+}
+function setPose(a){q.splice(0,6,...a);upd()}
+document.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{stopAnim();setPose(P[b.dataset.p])});
+document.getElementById("clr").onclick=()=>{cnt=0;last=null;tg.setDrawRange(0,0)};
+document.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{P[b.dataset.s]=q.slice()});
+document.getElementById("axes").onchange=e=>ax.forEach(a=>a.visible=e.target.checked);
+
+let anim=false,t0=0;const ab=document.getElementById("anim");
+function stopAnim(){anim=false;ab.classList.remove("on")}
+ab.onclick=()=>{if(anim){stopAnim();return}anim=true;t0=performance.now();ab.classList.add("on");setPose(P.A);
+ document.getElementById("clr").click()};
+function tick(){requestAnimationFrame(tick);
+ if(anim){const ph=((performance.now()-t0)/3500)%2,u=ph<1?ph:2-ph,s=u*u*(3-2*u);
+  for(let i=0;i<6;i++)q[i]=P.A[i]+(P.B[i]-P.A[i])*s;upd()}
+ R.render(S,C)}
+
+let th=.8,ph=1.15,rd=6;const tgt=new THREE.Vector3(0,1.1,0);
+function cam(){C.position.set(tgt.x+rd*Math.sin(ph)*Math.sin(th),tgt.y+rd*Math.cos(ph),tgt.z+rd*Math.sin(ph)*Math.cos(th));C.lookAt(tgt)}
+const pts=new Map();let pd=0;
+view.addEventListener("pointerdown",e=>{view.setPointerCapture(e.pointerId);pts.set(e.pointerId,e);view.style.cursor="grabbing"});
+const up_=e=>{pts.delete(e.pointerId);pd=0;view.style.cursor="grab"};view.addEventListener("pointerup",up_);view.addEventListener("pointercancel",up_);
+view.addEventListener("pointermove",e=>{
+ if(!pts.has(e.pointerId))return;
+ if(pts.size==1){const o=pts.get(e.pointerId);th-=(e.clientX-o.clientX)*.008;ph=Math.min(1.5,Math.max(.2,ph-(e.clientY-o.clientY)*.008))}
+ pts.set(e.pointerId,e);
+ if(pts.size==2){const [a,b]=[...pts.values()],d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);if(pd)rd=Math.min(14,Math.max(2.5,rd*pd/d));pd=d}
+ cam()});
+view.addEventListener("wheel",e=>{e.preventDefault();rd=Math.min(14,Math.max(2.5,rd*(1+e.deltaY*.001)));cam()},{passive:false});
+function size(){const w=view.clientWidth,h=view.clientHeight;R.setSize(w,h,false);R.domElement.style.width="100%";R.domElement.style.height="100%";C.aspect=w/h;C.updateProjectionMatrix()}
+new ResizeObserver(size).observe(view);size();cam();upd();tick();
+</script>
+</body>
+</html>
+
+</body></html>
